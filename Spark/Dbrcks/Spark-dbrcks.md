@@ -1,3 +1,71 @@
+# Spark DataFrame
+
+## Spark SQL
+
+Spark SQL is a module for structured data processing. Spark SQL has two ways of interacting with it: 1) Sql queries and 2) DataFrame API. The same Spark SQL query can be expressed with SQL and DataFrame API, they just use different syntax:
+
+| SQL                                                          | DataFrame API                                                |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| SELECT id, result<br/>FROM exams<br/>WHERE result > 70<br/>ORDER BY result | spark.table("exams")<br />.select("id", "result")<br />.where("result > 70")<br />.orderBy("result") |
+
+ <img src="D:\repositories\bigdata-masters\Spark\Dbrcks\asset\sparkDF_execution.png" style="zoom:80%;" />
+
+## DataFrame
+
+A DataFrame is a distributed collection of data grouped into named columns. A **schema** defines the column names and types of a DataFrame. A schema can be generally represented as a struct type. 
+
+<img src="D:\repositories\bigdata-masters\Spark\Dbrcks\asset\dataframe.PNG" style="zoom:80%;" />
+
+Dataframe **transformations** are methods that return a new Dataframe and are lazily evaluated. These transformations can be chained to build new Dataframes. 
+
+DataFrame **actions** are methods that trigger computation like `count(), collect(), show()`. An action is needed to trigger the execution of any Dataframe transformations.
+
+The **SparkSession** is the single entry point to all DataFrame API functionality. Automatically created in a Databricks notebook as the variable spark. Some of the SparkSession methods are `sql(), table(), read(), range(), createDataFrame()`.
+
+To query a DataFrame using SQL we create a temporary view. Data Frame itself is not registered as a table in dataframe in Metastore, but the view is registered in Metastore so that we can query it like a table. The results are computed on the actual Data Frame, the temp view is not persistant and is Session scoped.
+
+### DataFrame Column
+
+To spark columns are logical constructions that re[present a value computed on a per record basis by means of an expression. An individual column cannot be manipulated outside the context of a DF.  
+
+To refer to a column in pyspark use below available syntaxes:
+
+```python
+df["column_name"]
+# OR
+df.column_name
+# OR
+col("column_name")
+# OR
+col("column_name.field")
+```
+
+
+
+## Reader & Writer
+
+### Parquet
+
+- Parquet is a columnar storage format. It provides compressed efficient column data representation. Unlike csv, it  allows to read in only columns that you need, since values for a single record aren't stored together. 
+- Schema is stored in the footer of the file, so do not need to infer then schema. It does not waste space in storing missing values.
+- Parquet supports predicate push-down; that it is possible to push filters down to data source so as to load only columns that you care about.
+- Parquet also has data skipping available, where it stores max and min values of each segment so you can skip entire files. 
+- Parquet files are also harder to corrupt because people cannot just open and modify them.
+- We can define the schema if we want to for Parquet files. If working with Streaming data we will have to define schema upfront.
+- This file format is available to any project in the Hadoop ecosystem. 
+
+<img src=".\asset\Parquet_format.PNG" style="zoom:70%;" />
+
+### Delta Lake
+
+Delta Lake is an open source technology designed to work with spark to bring reliability to data lakes (build robust data lakes). Delta lake runs on top of existing data-lakes to bring ACID transaction, scalable meatadat handling and unified streaming & batch processing.
+
+### DataFrameReader and DataFrameWriter
+
+DataFrameReader is accessible through the SparkSession method read. DataFrameReader class provides an interface to load a DataFrame from external storage systems of various file format types. 
+
+DataFrameWriter interface is used to write a DataFrame to external storage systems. It is accessible through SparkSession write method.
+
 # DataFrame  Transformations 
 
 All the below pyspark transformation functions can be found at `pyspark.sql.functions`.
@@ -47,7 +115,7 @@ All the below pyspark transformation functions can be found at `pyspark.sql.func
 
 <img src="D:\repositories\bigdata-masters\Spark\Dbrcks\asset\Catalyst-AQE.PNG" style="zoom:80%;" />
 
-Catalyst optimizer is a general library to represent trees and applying rules to manipulate them. 
+**Catalyst optimizer** is a general library to represent trees and applying rules to manipulate them. 
 
 **Query** is the query using any of the available APIs, SQl, Dataframe, Dataset.
 
