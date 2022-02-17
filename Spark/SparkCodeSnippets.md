@@ -1,6 +1,6 @@
 # Databricks Platform Specific
 
-**Magic commands** : `%python` ,`%scala`, `%sql`, `%sh` and `%md` are the available magic commands.
+**Magic commands** : `%python` ,`%scala`, `%sql`, `%sh`, `%fs` and `%md` are the available magic commands.
 
 **Render Html**: use `displayHTML` (available in Python, Scala, and R)
 
@@ -521,7 +521,7 @@ df.groupBy(df["geo.state"].alias("province"))\
   .agg(sum("ecommerce.total_item_quantity").alias("total_purchases"))
 ```
 
-Apply multiple aggregate functions on grouped data.
+### Apply multiple aggregate functions on grouped data.
 
 ```python
 from pyspark.sql.functions import avg, approx_count_distinct
@@ -581,7 +581,9 @@ dateDF = timestampDF.withColumn("date", to_date(col("timestamp"))) # to_date
 plus2DF = timestampDF.withColumn("plus_two_days", date_add(col("timestamp"), 2)) # date_add
 ```
 
-# Miscellaneous Function Commentary
+
+
+# Miscellaneous Functions Commentary
 
 ## `explode()` vs `explode_outer()`
 

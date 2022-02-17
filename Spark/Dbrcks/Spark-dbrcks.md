@@ -145,15 +145,15 @@ If our goal is to process 1M records in parallel we need to divide that data up.
 
 <img src="D:\repositories\bigdata-masters\Spark\Dbrcks\asset\coalese vs repartition.PNG" style="zoom:80%;" />
 
-Which to use between Coalesce and Repartition?
+**Which to use between Coalesce and Repartition?**
 
-Coalesce cannot increase #partitions, this means if need is to increase #partitions then repartition is the obvious choice. However, Coalesce is a Narrow transformation, but is most probably not going to give a relatively balanced distribution. 
+Coalesce cannot increase #partitions, this means if need is to increase #partitions then repartition is the obvious choice. However, Coalesce is a Narrow transformation, but is most probably not going to give a relatively balanced distribution.
 
 Generally we want to make **#partitions a multiple of #cores**. That way every core is being used and every core is being assigned a task. Example: Say we have 8 slots. In this case if we have 5 partitions than we are underutilizing the number of cores. But if we have 9 partitions then we will double the time taken for completing the task, because first 8 partitions will be executed parallelly than we will need to wait for completion of the 9th partition.
 
-There are some rough guidelines around the size of each partition, which is around 200MB. This is largely from experience and is based on efficiency and not so much on resource limitation. 
+There are some rough guidelines around the size of each partition, which is around **200MB**. This is largely from experience and is based on efficiency and not so much on resource limitation.
 
-Whenever wide operations are used data is shuffled, and once data is huffled it has to re-partioned. To get default shuffle partitions use `spark.conf.get("spark.sql.shuffle.partitions")` and to set use `spark.conf.set("spark.sql.shuffle.partitions", "8")` .
+Whenever wide operations are used **data is shuffled**, and once data is shuffled it has to re-partioned. To get default shuffle partitions use `spark.conf.get("spark.sql.shuffle.partitions")` and to set use `spark.conf.set("spark.sql.shuffle.partitions", "8")` .
 
 ## General Partitioning Guidelines
 
@@ -162,7 +162,7 @@ Whenever wide operations are used data is shuffled, and once data is huffled it 
 - Size default shuffle partitions by dividing largest shuffle stage input by the target partition size.
   Eg: 4TB / 200MB = 20, 000 shuffle partition count.
 
-AQE dynamically coalesces shuffled partitions, when running queries in spark to deal with very large data, shuffle has a very big impact on query performance. Shuffle can be an expensive operator because it has to move data across the network. Which means data is re-distributed in a way that is required by downstream operators. One key property of this shuffling is the number of partitions. Thmis number can be hard to tune because it depends on a number of factors; if too few partitions   then data size of each partiions will be too large and the partitions might end up needing to spill data to disk as a result it slows down the query. But too many pations will end with very small data sizes on each partition and there are going to be many small network data fetches to read these shuffled blocks which also slows down the query. AQE on spark helps avoid some of these problems.
+AQE dynamically coalesces shuffled partitions, when running queries in spark to deal with very large data, shuffle has a very big impact on query performance. Shuffle can be an expensive operator because it has to move data across the network. Which means data is re-distributed in a way that is required by downstream operators. One key property of this shuffling is the number of partitions. This number can be hard to tune because it depends on a number of factors; if too few partitions then data size of each partiions will be too large and the partitions might end up needing to spill data to disk as a result it slows down the query. But too many pations will end with very small data sizes on each partition and there are going to be many small network data fetches to read these shuffled blocks which also slows down the query. AQE on spark helps avoid some of these problems.
 
 # Structured Streaming
 

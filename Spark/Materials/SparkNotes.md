@@ -25,6 +25,10 @@ These days MR / Hive are only used for maintaining old code bases. Hive is used 
 - MR kills its job as soon as it's done, So it can run alongside other services with minor performance differences.
 - Till Spark has an advantage as long as we are  talking about iterative operations on data.
 
+# Spark SQL vs Hive with Tez
+
+Spark SQL has advantage over Tez-Hive: 1) easier to manage clusters with only Spark jobs, 2) Easier to find 
+
 # Spark Components
 
 - **Spark Core,RDD, DF, DS, SQL** - API’s for basic data processing needs for batch layer.
@@ -34,89 +38,7 @@ These days MR / Hive are only used for maintaining old code bases. Hive is used 
 
 ![](.\asset\spark_components.PNG)
 
-# RDD (Resilient Distributed Dataset)
 
-RDD is the primary abstraction in Spark and it is the core of Apache spark. RDD are **immutable** and **partitioned** collection of records. RDDs **can only be created by** reading data from a stable storage like HDFS or by transforming on existing RDDs.
-
-**Resilient**, fault tolerant with the help of RDD lineage graph and so able to recompute missing or damaged partitions due to node failures. **Distributed** with data residing on multiple nodes in a cluster. **Dataset** is a collection of partitioned data with primitive values or values of values, e.g. tuples or other objects.
-
-For iterative distributed computing, it’s common to reuse and share data among multiple jobs or do parallel ad hoc queries over a shared dataset. The persistent issue with data reuse or data sharing exists in distributed computing system like Map-Reduce that is, you need to store data in some intermediate stable distributed store such as HDFS or Amazon S3. This makes overall computation of jobs slower for Map Reduce as it involves multiple IO operations, replications and serializations in the process. This is where RDD is useful.
-
-
-
-![](.\asset\rdd-partitions.png)
-
-![](.\asset\rdd_processing_example.png)
-
-
-
-## RDDs Fault Tolerance
-
-As RDD’s are created over a set of transformations, it logs these transformations rather than actual data. Graph of transformations to produce one RDD is called a Lineage Graph. 
-
-In case of we lose some partition of RDD, we can replay the transformation on that partition in lineage to achieve the same computation. This is the biggest benefit of RDD , because it saves a lot of efforts in data management and replication and thus achieves faster computations.
-
-## Traits of RDD
-
-- **In Memory** : data inside RDD is stored in memory as much (size) and long (time) as possible
-
-- **Immutable or Read Only** : it does not change once created and can only be transformed using transformations to new RDDs
-
-- **Lazy evaluated** : the data inside RDD is not available or transformed until an action is executed that triggers the execution.
-
-- **Cacheable** : you can hold all the data in a persistent “storage” like memory (default and the most preferred) or disk (the least preferred due to access speed).
-
-- **Partitioned** : records are partitioned (split into logical partitions) and distributed across nodes in a cluster. This enables **parallel** processing. 
-
-  **How many partitions is created (default) in RDD**?
-
-  One important parameter for parallel collections is the number of *partitions* to cut the dataset into. Spark will run one task for each partition of the cluster. Typically you want 2-4 partitions for each CPU in your cluster. Normally, Spark tries to set the number of partitions automatically based on your cluster. However, you can also set it manually by passing it as a second parameter to `parallelize` (e.g. `sc.parallelize(data, 10)`), this creates the partitions locally at the RDD level for this RDD only. 
-
-  `sc.defaultParallelism` will provide the default partitions at the cluster level. In Databricks it is set to 8. With less number of partitions 1, fault tolerance will not work as lineage graph cannot be created.
-  
-  For **repartitioning** the RDD, we can use `rddName.repartition(num_repartitions)`. If repartition happens after RDD is created will result in lot of shuffle.
-  
-  Shuffle happens only across nodes, so even with multiple partitions if the RDD is stored in the same node no shuffle happens.
-  
-- **Location Stickiness** : RDD can define placement preferences to compute partitions (as close to the records as possible).
-
-## Creating a RDD
-
-```python
-## from a list
-data = [1,2,3,4,5]
-# create the RDD, [partition = 4]
-rDD=sc.parallelize(data,4) # no computation occurs
-
-## read from a file
-firstRDD = spark.textFile("hdfs://…", numpartitions)
-
-## through transformation
-secondRDD = firstRDD.filter(someFunction)
-thirdRDD = secondRDD.map(someFunction)
-```
-
-
-
-## RDD  Actions 
-
-Actions are RDD operations that produce non-RDD values. They trigger execution of RDD transformations to return values. Simply put, an action evaluates the DAG.
-
-Some of the commonly used Actions are `reduce(func), count(), show(), take(n), collect(), takeOrdered(n, [ordering])` , etc. the full list can be found [here](https://spark.apache.org/docs/latest/rdd-programming-guide.html#actions).
-
-
-
-## RDD  Transformations
-
-- Transformations are lazy operations on a RDD that create one or many new RDDs, e.g. map, filter, reduceByKey, join, cogroup, etc. 
-
-- They are functions that take a RDD as the input and produce one or many RDDs as the output They do not change the input RDD (since RDDs are immutable), but always produce one or more new RDDs by applying the computations they represent. 
-
-- Transformations are lazy,they are not executed immediately but only after calling an action are transformations executed
-
-- After executing a transformation, the result RDD(s) will always be different from their parents and can be smaller ( e.g. filter, count, distinct, sample), bigger (e.g flatMap, union, cartesian) or the same size ( e.g. map)
-
-Some of the common Transformations are `map(func), filter(func), distinct([numTask]), flatMap(func)`. Full list can be found [here](https://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations).
 
 # Spark Core Concepts
 
@@ -124,12 +46,15 @@ Some of the common Transformations are `map(func), filter(func), distinct([numTa
 - Spark Application - often referred to as Driver Program or Application Master (only when using YARN; a hive job, a MR job, a spark job all are application masters) - at high level consists of SparkContext and user code which interacts with it creating RDDs and performing a series of transformations to achieve final result.
 - These transformations of RDDs are then translated into DAG and submitted to Scheduler to be executed on set of worker nodes.
 
-# Spark Execution Workflow
+
+
+# Spark Execution Workflow (Architecture)
 
 <p float="left">
   <img src=".\asset\spark_exec_wrkfwl_wireframe.png" style="zoom:50%;" />
   <img src=".\asset\spark_exec_wrkfwl_detailed.png" style="zoom:45%;" /> 
 </p>
+
 Spark Context (Spark Session) is the entry point of spark program. It lets interpreter know to use PySpark and not python. 
 
 Executer is unit of Spark and container is unit of Yarn. Node Manager allocates the container an Executer.
@@ -168,6 +93,8 @@ Each partition computation is a task.
 
 ![](.\asset\spark_cluster_dbrcks.png)
 
+
+
 # Spark DAG
 
  ![](.\asset\spark_dag.png)
@@ -191,6 +118,41 @@ DAG stands for Directed Acyclic Graph. This represents the workflow; from readin
 **Stages**
 
 Spark stages are created by breaking the RDD graph at the shuffle boundaries. A job is decomposed into single / multiple stages, and stages are further divided into individual tasks.
+
+# Spark Jobs - Stage, Shuffle, Task, Slots
+
+- Transformations: are used process and convert data, i.e. transform data. 
+
+  - Narrow Dependency transformations:
+    - Can be performed in parallel on each data partitions, without grouping data from multiple partitions.
+    - Ex: select(), filter(), withColumn(), drop(), etc
+  - Wide dependency transformations:
+    - Performed after grouping data from multiple partitions.
+    - Ex: groupBy(), join(), rollup(), cube(), agg(), etc.
+    - Causes Shuffle & sort.
+
+- Actions: 
+
+  - Used to trigger some work (job).
+  - Ex: read(), write(), collect(), take(), count(), etc
+
+- Jobs
+
+  ![](.\asset\spark-job-code-block.png)
+
+  - Next a Logical Plan is created.
+    <img src=".\asset\spark_logical_plan.png" style="zoom: 67%;" />
+  -  Driver then breaks the Logical Plan into execution plan consisting of Stages. #Stages = #Wide_dependencies + 1
+    ![](.\asset\spark-final-execution-plan.png)
+  - Spark cannot run these stages in parallel, as output of one stage is input to the next stage.
+  - The entire stage - for each stage then gets executed in parallel. Each parallel execution is a task; #task = #partitions.
+  - To transfer output of one stage to the next it should be written somewhere - Exchange Buffer.
+  - Since spark is distributed; hence the Read and Write Exchange Buffer may be on different nodes. Thus data from read buffer will need copying to Write buffer. This copying operation is called as Shuffle & Sort; it is more than simple copy and paste operation.
+  - Task is the smallest unit of work in a Spark job. Driver assigns these tasks to the Executer programs.
+  - Executer needs Task Code and Data partition to perform the task.
+    <img src=".\asset\spark-tasks.png" style="zoom: 67%;" />
+
+
 
 # Spark Memory Management
 
@@ -236,6 +198,153 @@ spark = SparkSession.builder \
 ```
 
 Further detailed inforamtion on creating a SparkSession and various methods available can be found [here](https://spark.apache.org/docs/latest/api/python/reference/api/pyspark.sql.SparkSession.html).
+
+
+
+# Spark Submit
+
+It is a command line tool that allows to submit the Spark application to the cluster.  Although there are other ways to submit a spark application to the cluster, this is the most common way.
+
+```shell
+spark-submit \
+--class <main-class> \ # not applicable for pyspark -- only Java or Scala
+--master yarn, local[3] \  # local[3] -- start local with 3 threads
+--deploy-mode client or cluster \ 
+--conf spark.executer.memoryOverhead=0.20 \ # 0.2 -- 20%
+--driver-cores 2 \ # CPU cores for the driver container
+--driver-memory 8G \ # RAM for the driver container
+--num-executers 4 \ # required number of executers
+--executer-cores 4 \ # CPU cores for each executer container
+--executer-memory 16G \ # RAM for each executer containers
+hello-spark.py # spark python file
+<application-jar> # spark jar for java or scala
+[application-args]
+```
+
+`class`: driving class name where main() is defined for Java and Scala. 
+
+`master`: specifies the cluster manager.
+
+`deploy-mode`: either client or cluster. Not local; local is a master configuration and not  a valid deploy mode.
+
+`conf`: additional spark configurations
+
+*Resource allocation options*: Spark application runs one driver container and one or more executer  containers.
+
+​	
+
+# Deploy modes: `client` and `cluster`
+
+Spark-submit allows to submit a Spark application in two modes either `cluster` or `client`. It is only applicable when `yarn` is used as cluster manager, for `local` there is no deploy to warrant a deploy mode.
+
+- Cluster Mode : `spark-submit --master yarn --deploy-mode cluster` 
+- Client mode: `spark-submit --master yarn --deploy-mode client` 
+
+The only difference between these two mode types is that in Cluster mode driver (main() method in JVM) runs in the cluster (in Application Manager container). Whereas, for client mode the driver runs in the client (users') machine.
+
+![](.\asset\cluster_vs_client_mode.png)
+
+
+
+## When to use Cluster Mode or Client Mode
+
+**Cluster Mode**:
+
+- No dependency on Client Machine: Since spark driver program runs on a worker node in cluster, so the user can log-off after submitting the spark job if needed.
+- Performance: Application runs faster in cluster mode because driver and worker are closer to each other and driver and executer communicate heavily, so being closer prevents impact of network latency.
+
+**Client Mode**:
+
+- Designed for interactive  workloads. Ex: spark shell, Notebooks. Because when the driver is available locally it is easy to communicate with the client and  show results interactively.
+- Also this makes exit easy, i.e. as soon as the client node is shutdown or stopped Yarn RM knows client is dead and  executers assigned to the driver are orphans. In such scenario Yarn RM terminates executer containers to free up the resources.
+
+We are more likely to use Cluster Mode almost always.
+
+# RDD (Resilient Distributed Dataset)
+
+RDD is the primary abstraction in Spark and it is the core of Apache spark. RDD are **immutable** and **partitioned** collection of records. RDDs **can only be created by** reading data from a stable storage like HDFS or by transforming on existing RDDs.
+
+**Resilient**, fault tolerant with the help of RDD lineage graph and so able to recompute missing or damaged partitions due to node failures. **Distributed** with data residing on multiple nodes in a cluster. **Dataset** is a collection of partitioned data with primitive values or values of values, e.g. tuples or other objects.
+
+For iterative distributed computing, it’s common to reuse and share data among multiple jobs or do parallel ad hoc queries over a shared dataset. The persistent issue with data reuse or data sharing exists in distributed computing system like Map-Reduce that is, you need to store data in some intermediate stable distributed store such as HDFS or Amazon S3. This makes overall computation of jobs slower for Map Reduce as it involves multiple IO operations, replications and serializations in the process. This is where RDD is useful.
+
+
+
+![](.\asset\rdd-partitions.png)
+
+![](.\asset\rdd_processing_example.png)
+
+
+
+## RDDs Fault Tolerance
+
+As RDD’s are created over a set of transformations, it logs these transformations rather than actual data. Graph of transformations to produce one RDD is called a Lineage Graph. 
+
+In case of we lose some partition of RDD, we can replay the transformation on that partition in lineage to achieve the same computation. This is the biggest benefit of RDD , because it saves a lot of efforts in data management and replication and thus achieves faster computations.
+
+## Traits of RDD
+
+- **In Memory** : data inside RDD is stored in memory as much (size) and long (time) as possible
+
+- **Immutable or Read Only** : it does not change once created and can only be transformed using transformations to new RDDs
+
+- **Lazy evaluated** : the data inside RDD is not available or transformed until an action is executed that triggers the execution.
+
+- **Cacheable** : you can hold all the data in a persistent “storage” like memory (default and the most preferred) or disk (the least preferred due to access speed).
+
+- **Partitioned** : records are partitioned (split into logical partitions) and distributed across nodes in a cluster. This enables **parallel** processing. 
+
+  **How many partitions is created (default) in RDD**?
+
+  One important parameter for parallel collections is the number of *partitions* to cut the dataset into. Spark will run one task for each partition of the cluster. Typically you want 2-4 partitions for each CPU in your cluster. Normally, Spark tries to set the number of partitions automatically based on your cluster. However, you can also set it manually by passing it as a second parameter to `parallelize` (e.g. `sc.parallelize(data, 10)`), this creates the partitions locally at the RDD level for this RDD only. 
+
+  `sc.defaultParallelism` will provide the default partitions at the cluster level. In Databricks it is set to 8. With less number of partitions 1, fault tolerance will not work as lineage graph cannot be created.
+
+  For **repartitioning** the RDD, we can use `rddName.repartition(num_repartitions)`. If repartition happens after RDD is created will result in lot of shuffle.
+
+  Shuffle happens only across nodes, so even with multiple partitions if the RDD is stored in the same node no shuffle happens.
+
+- **Location Stickiness** : RDD can define placement preferences to compute partitions (as close to the records as possible).
+
+## Creating a RDD
+
+```python
+## from a list
+data = [1,2,3,4,5]
+# create the RDD, [partition = 4]
+rDD=sc.parallelize(data,4) # no computation occurs
+
+## read from a file
+firstRDD = spark.textFile("hdfs://…", numpartitions)
+
+## through transformation
+secondRDD = firstRDD.filter(someFunction)
+thirdRDD = secondRDD.map(someFunction)
+```
+
+
+
+## RDD  Actions 
+
+Actions are RDD operations that produce non-RDD values. They trigger execution of RDD transformations to return values. Simply put, an action evaluates the DAG.
+
+Some of the commonly used Actions are `reduce(func), count(), show(), take(n), collect(), takeOrdered(n, [ordering])` , etc. the full list can be found [here](https://spark.apache.org/docs/latest/rdd-programming-guide.html#actions).
+
+
+
+## RDD  Transformations
+
+- Transformations are lazy operations on a RDD that create one or many new RDDs, e.g. map, filter, reduceByKey, join, cogroup, etc. 
+
+- They are functions that take a RDD as the input and produce one or many RDDs as the output They do not change the input RDD (since RDDs are immutable), but always produce one or more new RDDs by applying the computations they represent. 
+
+- Transformations are lazy,they are not executed immediately but only after calling an action are transformations executed
+
+- After executing a transformation, the result RDD(s) will always be different from their parents and can be smaller ( e.g. filter, count, distinct, sample), bigger (e.g flatMap, union, cartesian) or the same size ( e.g. map)
+
+Some of the common Transformations are `map(func), filter(func), distinct([numTask]), flatMap(func)`. Full list can be found [here](https://spark.apache.org/docs/latest/rdd-programming-guide.html#transformations).
+
+
 
 # Spark Caching
 
@@ -300,7 +409,7 @@ rdd2=sc.parallelize([(1,'a'),(2,'c'),(1,'b')])
 rdd2.groupByKey()
 ```
 
-`groupByKey()` should be avoided whenever possible ; it is wide and creates shuffle of data.  Whereas, `reduceByKey()` will shuffle less data.
+`groupByKey()` **should be avoided** whenever possible ; it is wide and creates shuffle of data.  Whereas, `reduceByKey()` will shuffle less data.
 
 ## `groupByKey()` v/s `reduceByKey()` v/s `aggregateByKey()` 
 
@@ -408,7 +517,82 @@ Caching is used to store intermediate data (RDD), so as to avoid re-computation 
 
 # Spark Partitions, Coalesce and Repartition
 
+PySpark partition is a way to split a large dataset into smaller datasets based on one or more partition keys. When you create a DataFrame from a file/table, based on certain parameters PySpark creates the DataFrame with a certain number of partitions in memory. This is one of the main advantages of PySpark DataFrame over Pandas DataFrame. Transformations on partitioned data run faster as they execute transformations parallelly for each partition.
 
+**Partitions** are **determined when files** are **read**. Spark determines RDD partitioning based on location, number and size of files. Usually each file is loaded into a single partition, but very large files are split across partitions. Catalyst Optimizer manages partitioning of RDDs that implement Dataframes. **`getNumPartitions()`** will return the number of partitions of this RDD. **`partitions()`** get the array of partitions of this RDD, taking into account whether the RDD is checkpointed or not, i.e how many partitons are there and what is the content of those partitions.
+
+Spark provides **`spark.sql.shuffle.partitions`** and **`spark.default.parallelism`** configurations to work with parallelism or partitions. As the shuffle operations re-partitions the data, we can use configurations `spark.default.parallelism` and `spark.sql.shuffle.partitions` to control the number of partitions shuffle creates. 
+
+**`spark.default.parallelism`** was introduced with `RDD` hence this property is **only applicable to RDD**. The default value for this configuration set to the number of all cores on all nodes in a cluster, on local, it is set to the number of cores on your system. For RDD, wider transformations like `reduceByKey()`, `groupByKey()`, `join()` triggers the data shuffling. Prior to using these operations, use the below code to set the desired partitions (change the value accordingly) for shuffle operations. 
+
+```python
+spark.conf.set("spark.default.parallelism",100)
+```
+
+ `spark.sql.shuffle.partitions` was introduced with `DataFrame` and it only works with DataFrame, the default value for this configuration set to 200. For DataFrame, wider transformations like `groupBy()`, `join()` triggers the data shuffling hence the result of these transformations results in partition size same as the value set in `spark.sql.shuffle.partitions`. Prior to using these operations, use the below code to get the desired partitions (change the value according to your need).
+
+```python
+spark.conf.set("spark.sql.shuffle.partitions",100)
+```
+
+Note: If the RDD/DataFrame transformations you are applying don’t trigger the data shuffle then these configurations are ignored by Spark.
+
+In real-time however we generally use spark-submit to set these values:
+
+```bash
+spark-submit --conf spark.sql.shuffle.partitions=100 \
+             --conf spark.default.parallelism=100
+```
+
+**What value to use?**
+
+Based on your dataset size, a number of cores, and memory, Spark shuffling can benefit or harm your jobs. When you dealing with less amount of data, you should typically reduce the shuffle partitions otherwise you will end up with many partitioned files with less number of records in each partition. which results in running many tasks with lesser data to process.
+
+On other hand, when you have too much of data and having less number of partitions results in fewer longer running tasks and some times you may also get out of memory error.
+
+Getting a right size of the shuffle partition is always tricky and takes many runs with different value to achieve the optimized number. This is one of the key property to look for when you have performance issues on Spark jobs.
+
+Spark supports **partition in two ways**; partition in memory (DataFrame) and partition on the disk (File system). **Partition in memory:** You can partition or repartition the DataFrame by calling [`repartition()` or `coalesce()`](https://sparkbyexamples.com/pyspark/pyspark-repartition-vs-coalesce/) transformations. **Partition on disk:** While writing the PySpark DataFrame back to disk, you can choose how to partition the data based on columns using `partitionBy()` of `pyspark.sql.DataFrameWriter`. This is similar to [Hives partitions scheme](https://sparkbyexamples.com/apache-hive/hive-partitions-explained-with-examples/).
+
+**Advantages of Partitions** are: while Partition in memory helps to achieve parallel processing by allowing executer process to assign one task to each partition, Partitioning on disk allows for faster access of the data.
+
+**`partitionBy()`** is used while writing the DataFrame to disk to partition the data  written to disk. PySpark splits the records based on the partition column and stores each partition data into a sub-directory. While writing the data as partitions, PySpark **eliminates** the partition column on the data file and adds partition column & value to the folder name, hence it saves some space on storage. It is possible to partition by multiple columns using `partitionBy()`. 
+
+**`repartition(n)`** creates the `n` specified number of partitions in the memory.  When `partitionBy()`is then followed by, it will write each partition into maximum `n` specified part files within each sub - folder as specified by the columns in **`partitionBy()`**.
+
+When creating partitions you have to be very cautious with the number of partitions you would create, as having too many partitions creates too many sub-directories on HDFS which brings unnecessary overhead to NameNode (if you are using Hadoop) since it must keep all metadata for the file system in memory. It is advisable to create partitions on States rather than creating on Zipcodes, or create partition on Year / Month rather than partitioning on date.
+
+### Repartition v/s Coalesce
+
+refer to **Spark-dbrcks.md**
+
+Coalesce does not create balance distribution of data in partitions.
+
+It is recommended to have partition size as large as possible, approximately in multiples of file system block size (256 MB for HDFS).
+
+# Schema Evolution
+
+Schema evolution is a feature that allows users to easily change a table’s current schema to accommodate data that is changing over time. Most commonly, it’s used when performing an append or overwrite operation, to automatically adapt the schema to include one or more new columns.
+
+Schema evolution is activated by adding **`.option('mergeSchema', 'true')`** to your `.write/.read` or `.writeStream/readStream` Spark command. By default it is turned off as it is an expensive operation. Alternatively, you can set this option for the entire Spark session by adding **`spark.sql.parquet.mergeSchema = True`** to your Spark configuration. Use with **caution**, as schema enforcement will no longer warn you about unintended schema mismatches.
+
+**Example Scenario**:
+
+A dataframe df1 is created with the following attributes: id bigint, attr0 string. df1 is saved as parquet format in **data/partition-date=2020-01-01**.
+
+A new dataframe df2 is created with following attributes: id bigint, attr0 string, attr1 string. df2 is saved as parquet format in **data/partition-date=2020-01-02**.
+
+A new dataframe df3 is created with attr0 removed: id bigint, attr1 string. df3 is saved as parquet format in **data/partition-date=2020-01-03**.
+
+The Spark application will need to read data from these three folders with schema merging.
+
+ `df = spark.read.option("mergeSchema","true").parquet("data")`. 
+
+If we don't specify `mergeSchema` option, the new attributes will not be picked up. Without schema merge, the schema will be decided randomly based on one of the partition files.
+
+# Spark SQL
+
+JOIN Types
 
 # Miscellaneous
 
@@ -475,7 +659,7 @@ allow for pipelined execution on same cluster in narrow transformation?
 
 which transformations cause narrow vs wide transformation? which types of transformations cause shuffle?
 
-what is co - partitioned join?
+what is co - partitioned join? waht is map side vs reduced side join?
 
 how to know which RDD is cached in the memory?
 
@@ -485,11 +669,11 @@ What is the size of braodcast variable in Spark?
 
 is RDD column row structured?
 
-how to checkpoint RDDs?
+how to checkpoint RDDs? Checkpoint vs Cache
 
 if first rdd is created with 80 partitions, then a transformation is apllied which reduces the size of the rdd then will the resulting rdd have same number of partitoions?
 
-how to get size of rdds? --> https://newbedev.com/how-to-find-spark-rdd-dataframe-size
+how to get size of rdds? ==> https://newbedev.com/how-to-find-spark-rdd-dataframe-size
 
 rdd cache() vs DF cache() ?
 
