@@ -119,6 +119,7 @@ DAG stands for Directed Acyclic Graph. This represents the workflow; from readin
 
 Spark stages are created by breaking the RDD graph at the shuffle boundaries. A job is decomposed into single / multiple stages, and stages are further divided into individual tasks.
 
+
 # Spark Jobs - Stage, Shuffle, Task, Slots
 
 - Transformations: are used process and convert data, i.e. transform data. 
@@ -154,6 +155,47 @@ Spark stages are created by breaking the RDD graph at the shuffle boundaries. A 
 
 
 
+# Spark SQL Engine and Query Planning
+
+<img src="D:\repositories\bigdata-masters\Spark\Materials\asset\spark_SQl_engine.png" style="zoom:50%;" />
+
+- Spark sql engine is fully ANSI 2003 complient.
+- Every SQL query is treated as a job.
+- Spark code is sequence of spark jobs, and each job represents a logical query plan. 
+- First Logical query paln (Unresolved) is user crated quey plan. Next it goes through Spark SQL Engine.
+- Dataframe API is the Functional programming interface.
+- Whether Spark SQL or Dataframe API - both go through Query Pla nning and Optimization.
+
+- The Spark SQL Engine will process your logical plan in four stages:
+  <img src="D:\repositories\bigdata-masters\Spark\Materials\asset\Spark_Query_Planning.png.png" style="zoom:50%;" />
+  - **Analysis**:  
+    - Parses for Errors and incorrect Names, incorrect type casting, invalid function name, etc. .
+      - Ex: `SELECT product_name, product_qty + 5 FROM sales;`
+      - Spark SQL engine will lookup the Catalog to identify if product_name, product_qty and sales are valid names.
+      - It will also look to implicity type cast product_qty to perform and validate the addition operation.
+      - Will through Analysis Exception if the names donot resolve.
+    - Will parse the code and create fully resolved logical plan.
+  - **Logical Optimization**:
+    -  Applies standard rule based optimizations to the Logical plan.
+      - Ex:
+        1. Constant Folding
+        2. Predicate pushdown
+        3. Partition prunning
+        4. Null propagation
+        5. Boolean expression simplification
+        6. etc. these rules are long and keep evolving.
+  - **Physical Planning**
+    - Spark SQL engine takes a Logical plan and generates one or more physical plans in the physical planning phase.
+    - Applies cost based optimizations
+    - Generates multiple Physical plans, calculate each plans cost and finally select the paln with least cost
+    - Here different join algorithms are used to creat more than one physical plan.
+    - Ex: One plan might be created using broadcast join, another using Sort - merge, another using shuffle - hash join, etc. Than they apply cost to each one and choose the best one.
+    - This is where DataFrame operations are convrted to RDD operations.
+  - **Code Generation**
+    - Best physical plan goes into code generation and Engine will generate Java byte code for RDD operations.
+
+
+
 # Spark Memory Management
 
 <img style="float: right;" src="./asset/spark_memory.png">
@@ -176,6 +218,12 @@ Spark stages are created by breaking the RDD graph at the shuffle boundaries. A 
 **Reserved Memory**
 
 - memory needed for running executor itself and not strictly related to Spark
+
+
+
+## Spark Memory Allocation
+
+
 
 # SparkContext and SparkSession
 
